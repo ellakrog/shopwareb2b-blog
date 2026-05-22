@@ -1,0 +1,135 @@
+---
+title: 'How to Setup Shopware 6 with Docker on Linux'
+date: '2026-05-22'
+tags: ['shopware', 'docker', 'linux', 'developer', 'fundament']
+draft: false
+summary: 'Step-by-step guide for setting up Shopware 6 locally with Docker on Linux.'
+images: ['/static/images/shopware-docker-cover.jpg']
+---
+
+# Introduction
+
+In this guide we will setup Shopware 6 locally using Docker on Linux.
+
+This setup is perfect for:
+
+- local development
+- plugin development
+- testing Shopware features
+- B2B projects
+
+We will use:
+
+- Docker
+- Dockware
+- Linux
+- Shopware 6
+
+---
+
+# Requirements
+
+Before starting make sure you have installed:
+
+- Docker
+- Docker Compose
+- Git
+
+Check your versions:
+
+```bash
+docker --version
+docker compose version
+git --version
+Install Docker on Linux
+
+For Ubuntu you can install Docker with:
+
+sudo apt update
+
+sudo apt install docker.io docker-compose -y
+
+Enable Docker:
+
+sudo systemctl enable docker
+sudo systemctl start docker
+
+Check if Docker works:
+
+docker ps
+Create Shopware Project
+
+Create a new project folder:
+
+mkdir shopware-docker
+cd shopware-docker
+
+Create a docker-compose.yml file:
+
+version: '3'
+
+services:
+  shopware:
+    image: dockware/shopware:latest
+    container_name: shopware
+    ports:
+      - "80:80"
+      - "3306:3306"
+      - "22:22"
+Start Docker Container
+
+Run:
+
+docker compose up -d
+
+Docker will now download the Shopware image and start the container.
+
+This can take a few minutes the first time.
+
+Open Shopware
+
+After the container starts open:
+
+http://localhost
+
+Shopware should now be running locally.
+
+Default Credentials
+
+Dockware default credentials:
+
+Admin:
+admin / shopware
+
+MySQL:
+root / root
+Useful Docker Commands
+
+Stop containers:
+
+docker compose down
+
+View logs:
+
+docker logs -f shopware
+
+Open container shell:
+
+docker exec -it shopware bash
+Next Steps
+
+After installation you can continue with:
+
+plugin development
+administration customization
+storefront development
+Docker optimization
+B2B workflows
+Resources
+
+Official Shopware documentation:
+
+Shopware Docs
+Dockware Github
+Dockware Documentation
+```
