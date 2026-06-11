@@ -1,135 +1,253 @@
 ---
-title: 'How to Setup Shopware 6 with Docker on Linux'
-date: '2026-05-22'
+title: 'Shopware 6 Quick Setup for Developers — Single Container with Dockware'
+date: '2026-05-25'
 tags: ['shopware', 'docker', 'linux', 'developer', 'fundament']
 draft: false
-summary: 'Step-by-step guide for setting up Shopware 6 locally with Docker on Linux.'
+summary: 'The fastest way to get Shopware 6 running locally with Docker using Dockware. One container, plugin folder mounted, shell alias included.'
 images: ['/static/images/shopware-docker-cover.jpg']
 ---
 
-# Introduction
+# Shopware 6 Quick Setup for Developers — Single Container with Dockware
 
-In this guide we will setup Shopware 6 locally using Docker on Linux.
+This is the fastest way to get Shopware 6 running locally for development. One container, one command, and you are ready to build plugins. No complex configuration, no multi-service setup — just a clean environment you can start coding in immediately.
 
-This setup is perfect for:
-
-- local development
-- plugin development
-- testing Shopware features
-- B2B projects
-
-We will use:
-
-- Docker
-- Dockware
-- Linux
-- Shopware 6
+This guide uses **dockware** — a community Docker image built specifically for Shopware development. It comes pre-installed with Shopware, PHP, a database, and everything else you need, all in one container.
 
 ---
 
-# Requirements
+## What You Will Have at the End
 
-Before starting make sure you have installed:
+- Shopware 6.6 running locally on port 8080
+- A mounted plugins folder so your code persists outside the container
+- A shell alias so you can run Shopware CLI commands with two letters instead of a full Docker command
+- Your first plugin scaffold created and ready to develop
 
-- Docker
-- Docker Compose
-- Git
+---
 
-Check your versions:
+## Prerequisites
+
+- Ubuntu 24.04 LTS
+- Docker Engine installed
+- VS Code with the Dev Containers and Docker extensions
+
+---
+
+## Step 1 — Check That Docker Is Running
+
+Before anything else, verify Docker is installed and the daemon is running:
 
 ```bash
+# Check Docker version
 docker --version
-docker compose version
-git --version
-Install Docker on Linux
 
-For Ubuntu you can install Docker with:
+# Check if the Docker daemon is running
+sudo systemctl status docker
 
-sudo apt update
+# If you use Docker Desktop, check that too
+systemctl --user status docker-desktop
 
-sudo apt install docker.io docker-compose -y
-
-Enable Docker:
-
-sudo systemctl enable docker
-sudo systemctl start docker
-
-Check if Docker works:
-
+# List running containers (should return empty table, not an error)
 docker ps
-Create Shopware Project
 
-Create a new project folder:
-
-mkdir shopware-docker
-cd shopware-docker
-
-Create a docker-compose.yml file:
-
-version: '3'
-
-services:
-  shopware:
-    image: dockware/shopware:latest
-    container_name: shopware
-    ports:
-      - "80:80"
-      - "3306:3306"
-      - "22:22"
-Start Docker Container
-
-Run:
-
-docker compose up -d
-
-Docker will now download the Shopware image and start the container.
-
-This can take a few minutes the first time.
-
-Open Shopware
-
-After the container starts open:
-
-http://localhost
-
-Shopware should now be running locally.
-
-Default Credentials
-
-Dockware default credentials:
-
-Admin:
-admin / shopware
-
-MySQL:
-root / root
-Useful Docker Commands
-
-Stop containers:
-
-docker compose down
-
-View logs:
-
-docker logs -f shopware
-
-Open container shell:
-
-docker exec -it shopware bash
-Next Steps
-
-After installation you can continue with:
-
-plugin development
-administration customization
-storefront development
-Docker optimization
-B2B workflows
-Resources
-
-Official Shopware documentation:
-
-Shopware Docs
-Dockware Github
-Dockware Documentation
+# List all containers including stopped ones
+docker ps -a
 ```
+
+If `docker ps` returns an error instead of an empty table, go back to the [Docker setup guide](#) and fix the permissions first.
+
+---
+
+## Step 2 — Pull the Dockware Image
+
+Pull the Shopware 6.6 image explicitly. Always use a specific version tag — never use `latest` in development because it can change without warning and break your setup months later.
+
+```bash
+docker pull dockware/shopware:6.6-latest
+```
+
+This downloads several GB so it takes a few minutes depending on your connection. Do this once and Docker caches it locally.
+
+You can browse all available dockware image tags at [hub.docker.com/r/dockware/shopware](https://hub.docker.com/r/dockware/shopware).
+
+---
+
+## Step 3 — Create Your Local Plugins Folder
+
+Open a terminal and navigate to wherever you keep your projects. Create a dedicated folder for this Shopware instance, then create the plugins directory inside it:
+
+```bash
+# Create the project folder and enter it
+mkdir shopware-quick
+cd shopware-quick
+
+# Create the plugins folder that will be mounted into the container
+mkdir -p custom/plugins
+```
+
+Why only the plugins folder and not the entire Shopware codebase? Because mounting the full Shopware source into a container is slow and unnecessary for most development work. You only need your own plugin code to be accessible on your host machine — everything else runs fine inside the container. This way your plugins survive even if you destroy and recreate the container.
+
+---
+
+## Step 4 — Start the Container
+
+Run this from inside your `shopware-quick` folder. The `$(pwd)` automatically uses your current directory path so this command works for everyone regardless of where their project lives:
+
+```bash
+docker run -d --name shop-quick \
+  -p 8080:80 \
+  -p 8443:443 \
+  -p 8022:22 \
+  -p 3307:3306 \
+  -p 9999:9999 \
+  -v $(pwd)/custom/plugins:/var/www/html/custom/plugins \
+  dockware/shopware:6.6-latest
+```
+
+Here is what each flag does:
+
+| Flag | Purpose |
+|---|---|
+| `-d` | Run in background |
+| `--name shop-quick` | Give the container a name you can reference later |
+| `-p 8080:80` | Shopware Storefront |
+| `-p 8443:443` | HTTPS |
+| `-p 8022:22` | SSH access into the container |
+| `-p 3307:3306` | Database — mapped to 3307 to avoid conflicts with any local MySQL |
+| `-p 9999:9999` | Xdebug for debugging |
+| `-v $(pwd)/custom/plugins:...` | Mount your local plugins folder into the container |
+
+Verify the container started correctly:
+
+```bash
+docker ps
+```
+
+You should see `shop-quick` with status `Up`.
+
+---
+
+## Step 5 — Open in VS Code
+
+Open VS Code and use **Dev Containers: Attach to Running Container** to connect directly to `shop-quick`. Once attached, open the folder `/var/www/html/custom/plugins`.
+
+You are now editing files inside the container with full IDE support, and everything you create there also appears in your local `shopware-quick/custom/plugins` folder.
+
+---
+
+## Step 6 — Create a Shell Alias for Shopware CLI
+
+Every time you want to run a Shopware console command, the full Docker command looks like this:
+
+```bash
+docker exec -it shop-quick bin/console plugin:list
+```
+
+That gets old fast. Create an alias so you only need to type `sw` instead:
+
+```bash
+nano ~/.bashrc
+```
+
+Scroll to the bottom of the file and add this line:
+
+```bash
+alias sw='docker exec -it shop-quick bin/console'
+```
+
+Save and exit nano:
+- `Ctrl + O` to save
+- `Enter` to confirm the filename
+- `Ctrl + X` to exit
+
+If you use **zsh** instead of bash, add the same line to `~/.zshrc` instead.
+
+Now activate the alias in your current terminal session:
+
+```bash
+source ~/.bashrc
+```
+
+Verify it worked:
+
+```bash
+alias sw
+```
+
+Output should be:
+
+```
+alias sw='docker exec -it shop-quick bin/console'
+```
+
+Test it with a real Shopware command:
+
+```bash
+sw plugin:list
+```
+
+You should see a table of installed Shopware plugins. If you do, the alias is working.
+
+---
+
+## Step 7 — Create Your First Plugin
+
+Now that the alias works, creating a plugin scaffold is one command:
+
+```bash
+sw plugin:create MyFirstPlugin
+```
+
+Shopware generates the full plugin structure inside `/var/www/html/custom/plugins/MyFirstPlugin` — which is also immediately visible in your local `shopware-quick/custom/plugins/MyFirstPlugin` folder thanks to the volume mount.
+
+---
+
+## Step 8 — Access Shopware and Update the Domain
+
+Open your browser and go to:
+
+| What | URL |
+|---|---|
+| Storefront | http://localhost:8080 |
+| Admin Panel | http://localhost:8080/admin |
+
+Default dockware credentials:
+
+| Field | Value |
+|---|---|
+| Username | `admin` |
+| Password | `shopware` |
+
+After logging in, go to **Settings → Sales Channels → Storefront** and update the domain to `http://localhost:8080`. This is important — without this step some Admin links and storefront redirects will point to the wrong URL.
+
+---
+
+## Daily Commands Reference
+
+```bash
+# Start the container after a reboot
+docker start shop-quick
+
+# Stop the container
+docker stop shop-quick
+
+# Enter the container shell
+docker exec -it shop-quick bash
+
+# Using the alias — Shopware CLI commands
+sw plugin:list
+sw plugin:install --activate MyFirstPlugin
+sw cache:clear
+sw database:migrate --all
+
+# View container logs
+docker logs shop-quick
+docker logs -f shop-quick
+```
+
+---
+
+## What Comes Next
+
+This single-container setup is ideal for plugin development and learning. In the next guide we move to a **multi-container setup** — Shopware, MySQL, Redis, and OpenSearch each in their own container — which mirrors how a real production environment works and gives you a much deeper understanding of how the stack fits together.
+
+The plugin you just scaffolded with `sw plugin:create` will be our starting point for the B2B development series.
